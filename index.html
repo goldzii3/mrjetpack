@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#24272c">
+<meta name="theme-color" content="#13294f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Mr.JETPACK スマホ横画面版（試作）</title>
@@ -21,15 +21,15 @@
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
 
-    /* 左右パネル（ライト：アルミ板風） */
-    --body: #b9bec6;
-    --body-edge: #8f96a0;
-    --plate: #e4e7eb;
-    --plate-lo: #7c838d;
-    --ink: #1c1f24;
-    --ink-soft: #4d545e;
-    --gold: #946f00;
-    --bezel: #16181c;
+    /* 左右パネル（紺色・文字は白） */
+    --body: #13294f;
+    --body-edge: #0a1731;
+    --plate: #24467c;
+    --plate-lo: #0b1a33;
+    --ink: #ffffff;
+    --ink-soft: #ffffff;
+    --gold: #ffd700;
+    --bezel: #070d18;
 
     /* ゲーム内の色をそのまま流用 */
     --hazard: #ffcc00;
@@ -42,23 +42,23 @@
 }
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-        --body: #24272c;
-        --body-edge: #121417;
-        --plate: #3b4048;
-        --plate-lo: #0d0e10;
-        --ink: #eceef1;
-        --ink-soft: #9aa3ae;
+        --body: #0f2144;
+        --body-edge: #060f22;
+        --plate: #1e3b6a;
+        --plate-lo: #081226;
+        --ink: #ffffff;
+        --ink-soft: #ffffff;
         --gold: #ffd700;
         --bezel: #000;
     }
 }
 :root[data-theme="dark"] {
-    --body: #24272c;
-    --body-edge: #121417;
-    --plate: #3b4048;
-    --plate-lo: #0d0e10;
-    --ink: #eceef1;
-    --ink-soft: #9aa3ae;
+    --body: #0f2144;
+    --body-edge: #060f22;
+    --plate: #1e3b6a;
+    --plate-lo: #081226;
+    --ink: #ffffff;
+    --ink-soft: #ffffff;
     --gold: #ffd700;
     --bezel: #000;
 }
@@ -139,7 +139,7 @@ body {
 .fuel-track {
     height: clamp(8px, 2.6vh, 14px);
     border: 2px solid var(--ink);
-    background: #444;
+    background: rgba(0, 0, 0, 0.45);
     padding: 1px;
 }
 #fuel-bar {
@@ -152,34 +152,109 @@ body {
 #fuel-bar.crit { background: #f00; animation: blink 0.5s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0.35; } }
 
-/* ===== 左パネル：方向ボタン ===== */
+/* ===== 左パネル：左右にだけ倒れるレバー ===== */
 .pad {
     flex: 1 1 0;
     min-height: 0;
 }
 #dpad {
-    display: flex;
-    gap: clamp(5px, 1vw, 10px);
-}
-.dir-btn {
-    flex: 1;
     display: grid;
     place-items: center;
-    border-radius: 12px;
-    background: var(--plate);
-    color: var(--ink);
-    box-shadow: inset 0 -5px 0 var(--plate-lo), 0 2px 0 rgba(0, 0, 0, 0.25);
+    container-type: size;
 }
-.dir-btn svg { width: min(58%, 44px); height: auto; }
-.dir-btn.on {
-    background: var(--hazard);
-    color: var(--hazard-ink);
-    box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
+.stick {
+    --tilt: 0deg;
+    position: relative;
+    width: 120px;
+    height: 120px;
+    width: min(100cqw, 100cqh);
+    height: min(100cqw, 100cqh);
 }
-.dir-btn.on.dash {
-    background: var(--flame);
-    box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.3), 0 0 14px var(--flame);
+/* 台座（横長のガイド溝＝左右にしか動かないことを示す） */
+.stick-gate {
+    position: absolute;
+    left: 3%;
+    right: 3%;
+    bottom: 12%;
+    height: 20%;
+    border-radius: 999px;
+    background: linear-gradient(#050b16, #0f2040);
+    box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.7),
+        0 0 0 3px #2c5290,
+        0 5px 0 3px #06101f;
+}
+.stick-gate::before {
+    content: "";
+    position: absolute;
+    left: 30%;
+    right: 30%;
+    top: 40%;
+    height: 20%;
+    border-radius: 999px;
+    background: #000;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.gate-arrow {
+    position: absolute;
+    top: 50%;
+    width: 14%;
+    height: 56%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.45);
+}
+.gate-arrow.l { left: 9%; }
+.gate-arrow.r { right: 9%; }
+.stick.left .gate-arrow.l,
+.stick.right .gate-arrow.r { color: var(--hazard); }
+.stick.dash.left .gate-arrow.l,
+.stick.dash.right .gate-arrow.r { color: var(--flame); }
+
+/* レバー本体：台座の中心を支点に回転 */
+.stick-lever {
+    position: absolute;
+    left: 31%;
+    bottom: 22%;
+    width: 38%;
+    height: 72%;
+    transform-origin: 50% 100%;
+    transform: rotate(var(--tilt));
+    transition: transform 0.16s cubic-bezier(0.3, 1.6, 0.5, 1); /* 指を離すとバネのように戻る */
+}
+.stick.dragging .stick-lever { transition: none; }
+.stick-shaft {
+    position: absolute;
+    left: 39%;
+    bottom: 0;
+    width: 22%;
+    height: 62%;
+    border-radius: 999px 999px 3px 3px;
+    background: linear-gradient(90deg, #6f7986, #eef1f5 45%, #a3acb7 70%, #56606c);
+}
+.stick-ball {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 52.8%; /* 正円になる高さ（38 ÷ 72） */
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%, #fff6c4 0 9%, #ffd21a 32%, #e0a800 68%, #9c7000);
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35), inset 0 -4px 6px rgba(0, 0, 0, 0.18);
+}
+.stick.dash .stick-ball {
+    background: radial-gradient(circle at 34% 30%, #fff1d6 0 9%, #ffb347 32%, #ff8c00 68%, #a85400);
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35), 0 0 16px 4px var(--flame);
+}
+/* 支点のカバー（軸が台座に差し込まれて見えるように） */
+.stick-washer {
+    position: absolute;
+    left: 38%;
+    bottom: 18%;
+    width: 24%;
+    height: 8%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 40%, #33404f, #0b1320 70%);
+    box-shadow: 0 0 0 2px #7d8896;
 }
 
 /* ===== 画面中央：ゲーム ===== */
@@ -356,7 +431,7 @@ body {
     justify-content: center;
     gap: 24px;
     padding: 24px;
-    background: #15171b;
+    background: var(--body);
     color: #fff;
     font-family: "DotGothic16", sans-serif;
     font-size: 18px;
@@ -399,11 +474,16 @@ body {
         </div>
         <div class="stripe"></div>
         <div id="dpad" class="pad">
-            <div class="dir-btn" id="btn-left" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M17 3v18L5 12z" fill="currentColor"/></svg>
-            </div>
-            <div class="dir-btn" id="btn-right" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M7 3v18l12-9z" fill="currentColor"/></svg>
+            <div class="stick" id="stick" aria-hidden="true">
+                <div class="stick-gate">
+                    <svg class="gate-arrow l" viewBox="0 0 10 12"><path d="M9 0v12L0 6z" fill="currentColor"/></svg>
+                    <svg class="gate-arrow r" viewBox="0 0 10 12"><path d="M1 0v12l9-6z" fill="currentColor"/></svg>
+                </div>
+                <div class="stick-lever">
+                    <div class="stick-shaft"></div>
+                    <div class="stick-ball"></div>
+                </div>
+                <div class="stick-washer"></div>
             </div>
         </div>
     </aside>
@@ -415,7 +495,7 @@ body {
             <h1 id="main-title">Mr.JETPACK</h1>
             <div id="game-message"></div>
             <div id="legend" class="legend">
-                <span class="key">◀ ▶</span><span>向きを変える（長押しでダッシュ）</span>
+                <span class="key">◀ ▶</span><span>レバーで向きを変える（倒し続けるとダッシュ）</span>
                 <span class="key jet">JET</span><span>ジェット噴射</span>
             </div>
             <button id="action-button" type="button">START GAME</button>
@@ -479,8 +559,7 @@ const leftPanel = document.getElementById('left');
 const rightPanel = document.getElementById('right');
 const dpadEl = document.getElementById('dpad');
 const jetZoneEl = document.getElementById('jet-zone');
-const btnLeft = document.getElementById('btn-left');
-const btnRight = document.getElementById('btn-right');
+const stickEl = document.getElementById('stick');
 const btnJet = document.getElementById('btn-jet');
 const fuelBar = document.getElementById('fuel-bar');
 const hudStage = document.getElementById('hud-stage');
@@ -1544,8 +1623,7 @@ function render() {
     wasBoosting = boosting;
     Sound.jet(playing && player.isThrusting, boosting);
 
-    setClass(btnLeft, 'dash', playing && player.isDashing && player.dashDirection === -1);
-    setClass(btnRight, 'dash', playing && player.isDashing && player.dashDirection === 1);
+    setClass(stickEl, 'dash', playing && player.isDashing);
 }
 
 function frame(ts) {
@@ -1578,12 +1656,15 @@ let zones = null;
 function measureZones() {
     const lp = leftPanel.getBoundingClientRect();
     const dp = dpadEl.getBoundingClientRect();
+    const st = stickEl.getBoundingClientRect();
     const rp = rightPanel.getBoundingClientRect();
     const jz = jetZoneEl.getBoundingClientRect();
     const W = window.innerWidth, H = window.innerHeight;
     zones = {
         // 画面の左端（セーフエリア部分）まで判定を広げる
-        dir: { l: -10, r: lp.right, t: dp.top - 8, b: H + 10, mid: dp.left + dp.width / 2 },
+        // mid＝レバーの支点、travel＝倒しきる距離、dead＝反応しない中央の幅
+        dir: { l: -10, r: lp.right, t: dp.top - 8, b: H + 10,
+               mid: st.left + st.width / 2, travel: st.width * 0.42, dead: st.width * 0.08 },
         jet: { l: rp.left, r: W + 10, t: jz.top - 8, b: H + 10 }
     };
 }
@@ -1595,24 +1676,47 @@ function zoneAt(x, y) {
     return null;
 }
 
+const STICK_MAX_DEG = 30;
+let lastTilt = null;
+let lastDragging = null;
+function setStickTilt(t, dragging) {
+    const deg = Math.round(t * STICK_MAX_DEG * 10) / 10;
+    if (dragging !== lastDragging) {
+        setClass(stickEl, 'dragging', dragging);
+        lastDragging = dragging;
+    }
+    if (deg !== lastTilt) {
+        stickEl.style.setProperty('--tilt', deg + 'deg');
+        lastTilt = deg;
+    }
+}
+
 function recomputeInput() {
     let jet = false;
-    let dirX = null;
-    let latest = -1;
+    let dirP = null;
     pointers.forEach(p => {
         if (p.zone === 'jet') jet = true;
-        else if (p.zone === 'dir' && p.seq > latest) { latest = p.seq; dirX = p.x; }
+        else if (p.zone === 'dir' && (!dirP || p.seq > dirP.seq)) dirP = p;
     });
-    let tl = false, tr = false;
-    if (dirX !== null) {
-        if (dirX < zones.dir.mid) tl = true; else tr = true;
+
+    // レバー：支点からの指の横位置で判定（中央付近は無反応）
+    let tl = false, tr = false, tilt = 0;
+    if (dirP) {
+        const d = zones.dir;
+        const dx = dirP.x - d.mid;
+        tilt = Math.max(-1, Math.min(1, dx / d.travel));
+        if (dx < -d.dead) tl = true;
+        else if (dx > d.dead) tr = true;
     }
     keys.ArrowLeft = kbd.ArrowLeft || tl;
     keys.ArrowRight = kbd.ArrowRight || tr;
     keys.Space = kbd.Space || jet;
 
-    setClass(btnLeft, 'on', keys.ArrowLeft);
-    setClass(btnRight, 'on', keys.ArrowRight);
+    // キーボード操作のときもレバーを倒して見せる
+    if (!dirP) tilt = keys.ArrowRight ? 1 : keys.ArrowLeft ? -1 : 0;
+    setStickTilt(tilt, !!dirP);
+    setClass(stickEl, 'left', keys.ArrowLeft && !keys.ArrowRight);
+    setClass(stickEl, 'right', keys.ArrowRight);
     setClass(btnJet, 'on', keys.Space);
 }
 
