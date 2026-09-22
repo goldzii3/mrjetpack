@@ -613,15 +613,24 @@ const WORLD_WIDTH = 800 * 3;
 const WORLD_HEIGHT = 600 * 3;
 const TILE_SIZE = 40;
 
-// Physics Constants（元のまま）
-const GRAVITY = 0.15;
-const THRUST = 0.35;
-const MAX_FALL_SPEED = 8;
-const MAX_FLY_SPEED = 6;
+// ===== 大きさ・速さの調整（1.0 で元の値） =====
+const PLAYER_SCALE = 1.5;   // プレイヤーの大きさ
+const COIN_SCALE   = 1.5;   // コインの大きさ
+const TANK_SCALE   = 2.0;   // 燃料タンクの大きさ
+const SPEED_SCALE  = 0.8;   // 移動の速さ（小さいほどゆっくり）
+
+// Physics Constants（元の値 × SPEED_SCALE）
+// 加速度と最高速度を同じ割合で下げるので、操作の反応の早さはそのままで全体がゆっくりになる
+const GRAVITY = 0.15 * SPEED_SCALE;
+const THRUST = 0.35 * SPEED_SCALE;
+const MAX_FALL_SPEED = 8 * SPEED_SCALE;
+const MAX_FLY_SPEED = 6 * SPEED_SCALE;
 const FRICTION = 0.95;
+const HARD_LANDING_SPEED = 3.0 * SPEED_SCALE; // これより速く着地すると燃料が減る
 
 const MAX_FUEL = 100;
-const FUEL_CONSUMPTION_RATE = 0.085;
+// ゆっくりになったぶん移動に時間がかかるため、同じ距離で使う燃料が変わらないよう消費も合わせる
+const FUEL_CONSUMPTION_RATE = 0.085 * SPEED_SCALE;
 const TOTAL_COINS = 10;
 
 // Game State
@@ -767,8 +776,8 @@ function buzz(ms) {
 // ============================================================
 class Player {
     constructor() {
-        this.width = 29;
-        this.height = 51;
+        this.width = Math.round(29 * PLAYER_SCALE);
+        this.height = Math.round(51 * PLAYER_SCALE);
         this.reset();
     }
 
@@ -881,13 +890,13 @@ class Player {
         let pRowBottom = Math.floor((this.y + this.height - 1) / TILE_SIZE);
 
         if (this.vx > 0) {
-            if (world.isSolid(pColRight, pRowTop) || world.isSolid(pColRight, pRowBottom)) {
+            if (world.solidInCol(pColRight, pRowTop, pRowBottom)) {
                 this.x = pColRight * TILE_SIZE - this.width - 0.1;
                 this.vx = 0;
                 if (Math.abs(this.vx) > 0.5 || this.isThrusting) collided = true;
             }
         } else if (this.vx < 0) {
-            if (world.isSolid(pColLeft, pRowTop) || world.isSolid(pColLeft, pRowBottom)) {
+            if (world.solidInCol(pColLeft, pRowTop, pRowBottom)) {
                 this.x = (pColLeft + 1) * TILE_SIZE + 0.1;
                 this.vx = 0;
                 if (Math.abs(this.vx) > 0.5 || this.isThrusting) collided = true;
@@ -902,13 +911,13 @@ class Player {
         pRowBottom = Math.floor((this.y + this.height) / TILE_SIZE);
 
         if (this.vy > 0) {
-            if (world.isSolid(pColLeft, pRowBottom) || world.isSolid(pColRight, pRowBottom)) {
+            if (world.solidInRow(pRowBottom, pColLeft, pColRight)) {
                 this.y = pRowBottom * TILE_SIZE - this.height;
-                if (this.vy > 3.0) collided = true;
+                if (this.vy > HARD_LANDING_SPEED) collided = true;
                 this.vy = 0;
             }
         } else if (this.vy < 0) {
-            if (world.isSolid(pColLeft, pRowTop) || world.isSolid(pColRight, pRowTop)) {
+            if (world.solidInRow(pRowTop, pColLeft, pColRight)) {
                 this.y = (pRowTop + 1) * TILE_SIZE + 0.1;
                 this.vy = 0;
                 collided = true;
@@ -932,7 +941,7 @@ class Player {
     draw(ctx, camX, camY) {
         const drawX = this.x - camX;
         const drawY = this.y - camY;
-        const s = 1.5;
+        const s = 1.5 * PLAYER_SCALE;
 
         ctx.save();
         ctx.translate(drawX, drawY);
@@ -1058,11 +1067,11 @@ class World {
         while (placed < TOTAL_COINS && attempts < 1000) {
             const r = Math.floor(Math.random() * (this.rows - 4)) + 2;
             const c = Math.floor(Math.random() * (this.cols - 4)) + 2;
-            if (this.grid[r][c] === 0) {
+            if (this.isOpenAround(r, c)) {
                 this.coins.push({
                     x: c * TILE_SIZE + TILE_SIZE / 2,
                     y: r * TILE_SIZE + TILE_SIZE / 2,
-                    radius: 12,
+                    radius: 12 * COIN_SCALE,
                     collected: false
                 });
                 placed++;
@@ -1078,12 +1087,12 @@ class World {
         while (placed < 3 && attempts < 1000) {
             const r = Math.floor(Math.random() * (this.rows - 4)) + 2;
             const c = Math.floor(Math.random() * (this.cols - 4)) + 2;
-            if (this.grid[r][c] === 0) {
+            if (this.isOpenAround(r, c)) {
                 this.fuelTanks.push({
                     x: c * TILE_SIZE + TILE_SIZE / 2,
                     y: r * TILE_SIZE + TILE_SIZE / 2,
-                    width: 16,
-                    height: 24,
+                    width: 16 * TANK_SCALE,
+                    height: 24 * TANK_SCALE,
                     collected: false
                 });
                 placed++;
@@ -1099,7 +1108,7 @@ class World {
             if (!coin.collected) {
                 const dx = px - coin.x;
                 const dy = py - coin.y;
-                if (Math.sqrt(dx * dx + dy * dy) < coin.radius + 15) {
+                if (Math.sqrt(dx * dx + dy * dy) < coin.radius + 15 * PLAYER_SCALE) {
                     coin.collected = true;
                     collectedCoins++;
                     Sound.coin();
@@ -1115,7 +1124,7 @@ class World {
             if (!tank.collected) {
                 const dx = px - tank.x;
                 const dy = py - tank.y;
-                if (Math.sqrt(dx * dx + dy * dy) < (tank.width / 2) + 20) {
+                if (Math.sqrt(dx * dx + dy * dy) < (tank.width / 2) + 20 * PLAYER_SCALE) {
                     tank.collected = true;
                     player.fuel += MAX_FUEL * 0.35;
                     if (player.fuel > MAX_FUEL) player.fuel = MAX_FUEL;
@@ -1206,6 +1215,23 @@ class World {
     isSolid(col, row) {
         if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return true;
         return this.grid[row][col] === 1;
+    }
+    solidInCol(col, row0, row1) {
+        for (let r = row0; r <= row1; r++) if (this.isSolid(col, r)) return true;
+        return false;
+    }
+    solidInRow(row, col0, col1) {
+        for (let c = col0; c <= col1; c++) if (this.isSolid(c, row)) return true;
+        return false;
+    }
+    // 周囲3×3マスが空いているか（大きくなったプレイヤーが確実に取れる場所だけにアイテムを置く）
+    isOpenAround(r, c) {
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (this.isSolid(c + dc, r + dr)) return false;
+            }
+        }
+        return true;
     }
 
     checkGoal(player) {
@@ -1338,16 +1364,20 @@ class World {
             const tx = tank.x - camX - tank.width / 2;
             const ty = tank.y - camY - tank.height / 2;
             if (tx > -tank.width && tx < VIEW_WIDTH && ty > -tank.height && ty < VIEW_HEIGHT) {
+                ctx.save();
+                ctx.translate(tx, ty);
+                ctx.scale(TANK_SCALE, TANK_SCALE);
                 ctx.fillStyle = '#888';
-                ctx.fillRect(tx + 6, ty - 2, 4, 2);
+                ctx.fillRect(6, -2, 4, 2);
                 ctx.fillStyle = '#AAA';
-                ctx.fillRect(tx + 4, ty, 8, 4);
+                ctx.fillRect(4, 0, 8, 4);
                 ctx.fillStyle = '#E00';
-                ctx.fillRect(tx + 2, ty + 4, 12, 16);
+                ctx.fillRect(2, 4, 12, 16);
                 ctx.fillStyle = '#FD0';
-                ctx.fillRect(tx + 2, ty + 10, 12, 4);
+                ctx.fillRect(2, 10, 12, 4);
                 ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                ctx.fillRect(tx + 8, ty + 4, 6, 16);
+                ctx.fillRect(8, 4, 6, 16);
+                ctx.restore();
             }
         });
 
